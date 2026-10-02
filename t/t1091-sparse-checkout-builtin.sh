@@ -252,6 +252,14 @@ test_expect_success 'sparse-checkout disable' '
 	check_files repo a deep folder1 folder2
 '
 
+test_expect_success 'skip precious-file pattern in $GIT_DIR/info/sparse-checkout' "
+	test_when_finished rm actual .git/info/sparse-checkout &&
+	test_when_finished git sparse-checkout disable &&
+	echo \"$/ciao\" > .git/info/sparse-checkout &&
+	git sparse-checkout init >actual 2>&1 &&
+	test_grep \"warning: '$/ciao' precious-files pattern not allowed here, skipping\" actual
+"
+
 test_expect_success 'sparse-index enabled and disabled' '
 	git -C repo sparse-checkout init --cone --sparse-index &&
 	test_cmp_config -C repo true index.sparse &&
