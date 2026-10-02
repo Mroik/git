@@ -20,6 +20,7 @@
 #include "setup.h"
 #include "sparse-index.h"
 #include "worktree.h"
+#include "attr.h"
 
 static const char *empty_base = "";
 
