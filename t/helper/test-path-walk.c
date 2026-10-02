@@ -124,7 +124,7 @@ int cmd__path_walk(int argc, const char **argv)
 		info.pl->use_cone_patterns = 1;
 
 		strbuf_fread(&in, 2048, stdin);
-		add_patterns_from_buffer(in.buf, in.len, "", 0, info.pl);
+		add_patterns_from_buffer(in.buf, in.len, "", 0, info.pl, 0);
 		strbuf_release(&in);
 	}
 

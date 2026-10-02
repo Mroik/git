@@ -707,7 +707,7 @@ static int filter_by_patterns_cmd(void)
 			item = &ignore_list.items[i];
 			if (!*item->string)
 				continue;
-			add_pattern(item->string, "", 0, pl, -(i+1));
+			add_pattern(item->string, "", 0, pl, -(i+1), 0);
 		}
 
 		changed = 0;
@@ -1018,7 +1018,7 @@ int cmd_clean(int argc,
 
 	pl = add_pattern_list(&dir, EXC_CMDL, "--exclude option");
 	for (i = 0; i < exclude_list.nr; i++)
-		add_pattern(exclude_list.items[i].string, "", 0, pl, -(i+1));
+		add_pattern(exclude_list.items[i].string, "", 0, pl, -(i+1), 0);
 
 	parse_pathspec(&pathspec, 0,
 		       PATHSPEC_PREFER_CWD,
