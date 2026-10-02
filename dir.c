@@ -993,7 +993,8 @@ int hashmap_contains_parent(struct hashmap *map,
  * which are negated precious-files.
  */
 void add_pattern(const char *string, const char *base,
-		 int baselen, struct pattern_list *pl, int srcpos)
+		 int baselen, struct pattern_list *pl, int srcpos,
+		 int disable_precious)
 {
 	struct path_pattern *pattern;
 	int patternlen;
@@ -1002,6 +1003,12 @@ void add_pattern(const char *string, const char *base,
 
 	if (parse_path_pattern(&string, &patternlen, &flags, &nowildcardlen)) {
 		warning(_("pattern '%s' is problematic, skipping"), string);
+		return;
+	}
+
+	if (disable_precious && (flags & PATTERN_FLAG_PRECIOUS)) {
+		warning(_("'$%s' precious-files pattern not allowed here, skipping"),
+			string);
 		return;
 	}
 	FLEX_ALLOC_MEM(pattern, pattern, string, patternlen);
@@ -1162,6 +1169,7 @@ static void invalidate_directory(struct untracked_cache *uc,
 
 /* Flags for add_patterns() */
 #define PATTERN_NOFOLLOW (1<<0)
+#define PATTERN_DISALLOW_PRECIOUS (1<<1)
 
 /*
  * Given a file with name "fname", read it (either from disk, or from
@@ -1244,14 +1252,15 @@ static int add_patterns(const char *fname, const char *base, int baselen,
 		return -1;
 	}
 
-	add_patterns_from_buffer(buf, size, base, baselen, pl);
+	add_patterns_from_buffer(buf, size, base, baselen, pl,
+				 flags & PATTERN_DISALLOW_PRECIOUS);
 	free(buf);
 	return 0;
 }
 
 int add_patterns_from_buffer(char *buf, size_t size,
 			     const char *base, int baselen,
-			     struct pattern_list *pl)
+			     struct pattern_list *pl, int disable_precious)
 {
 	char *orig = buf;
 	int i, lineno = 1;
@@ -1270,7 +1279,8 @@ int add_patterns_from_buffer(char *buf, size_t size,
 			if (entry != buf + i && entry[0] != '#') {
 				buf[i - (i && buf[i-1] == '\r')] = 0;
 				trim_trailing_spaces(entry);
-				add_pattern(entry, base, baselen, pl, lineno);
+				add_pattern(entry, base, baselen, pl, lineno,
+					    disable_precious);
 			}
 			lineno++;
 			entry = buf + i + 1;
@@ -1307,7 +1317,7 @@ int add_patterns_from_blob_to_list(
 		return -1;
 	}
 
-	add_patterns_from_buffer(buf, size, base, baselen, pl);
+	add_patterns_from_buffer(buf, size, base, baselen, pl, 0);
 	free(buf);
 	return 0;
 }
