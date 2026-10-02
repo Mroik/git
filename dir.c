@@ -1870,8 +1870,8 @@ struct dir_entry *dir_add_ignored(struct dir_struct *dir,
 	if (!index_name_is_other(istate, pathname, len))
 		return NULL;
 
-	ALLOC_GROW(dir->ignored, dir->ignored_nr+1, dir->internal.ignored_alloc);
-	return dir->ignored[dir->ignored_nr++] = dir_entry_new(pathname, len);
+	ALLOC_GROW(dir->trashable, dir->trashable_nr+1, dir->internal.trashable_alloc);
+	return dir->trashable[dir->trashable_nr++] = dir_entry_new(pathname, len);
 }
 
 enum exist_status {
@@ -2160,7 +2160,7 @@ static enum path_treatment treat_directory(struct dir_struct *dir,
 	 * untracked paths so will need to pop all those off the last
 	 * after we traverse.
 	 */
-	old_ignored_nr = dir->ignored_nr;
+	old_ignored_nr = dir->trashable_nr;
 	old_untracked_nr = dir->nr;
 
 	/* Actually recurse into dirname now, we'll fixup the state later. */
@@ -2192,9 +2192,9 @@ static enum path_treatment treat_directory(struct dir_struct *dir,
 			 */
 			state = path_none;
 		} else {
-			for (int i = old_ignored_nr; i < dir->ignored_nr; i++)
-				FREE_AND_NULL(dir->ignored[i]);
-			dir->ignored_nr = old_ignored_nr;
+			for (int i = old_ignored_nr; i < dir->trashable_nr; i++)
+				FREE_AND_NULL(dir->trashable[i]);
+			dir->trashable_nr = old_ignored_nr;
 		}
 	}
 
@@ -3161,7 +3161,7 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 	if (!len || treat_leading_path(dir, istate, path, len, pathspec))
 		read_directory_recursive(dir, istate, path, len, untracked, 0, 0, pathspec);
 	QSORT(dir->entries, dir->nr, cmp_dir_entry);
-	QSORT(dir->ignored, dir->ignored_nr, cmp_dir_entry);
+	QSORT(dir->trashable, dir->trashable_nr, cmp_dir_entry);
 
 	emit_traversal_statistics(dir, istate->repo, path, len);
 
@@ -3567,11 +3567,11 @@ void dir_clear(struct dir_struct *dir)
 		free(group->pl);
 	}
 
-	for (i = 0; i < dir->ignored_nr; i++)
-		free(dir->ignored[i]);
+	for (i = 0; i < dir->trashable_nr; i++)
+		free(dir->trashable[i]);
 	for (i = 0; i < dir->nr; i++)
 		free(dir->entries[i]);
-	free(dir->ignored);
+	free(dir->trashable);
 	free(dir->entries);
 
 	stk = dir->internal.exclude_stack;

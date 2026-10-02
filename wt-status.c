@@ -836,8 +836,8 @@ static void wt_status_collect_untracked(struct wt_status *s)
 	}
 	string_list_sort_u(&s->untracked, 0);
 
-	for (i = 0; i < dir.ignored_nr; i++) {
-		struct dir_entry *ent = dir.ignored[i];
+	for (i = 0; i < dir.trashable_nr; i++) {
+		struct dir_entry *ent = dir.trashable[i];
 		if (index_name_is_other(istate, ent->name, ent->len))
 			string_list_append(&s->ignored, ent->name);
 	}

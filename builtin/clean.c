@@ -890,12 +890,12 @@ static void correct_untracked_entries(struct dir_struct *dir)
 
 	for (src = dst = ign = 0; src < dir->nr; src++) {
 		/* skip paths in ignored[] that cannot be inside entries[src] */
-		while (ign < dir->ignored_nr &&
-		       0 <= cmp_dir_entry(&dir->entries[src], &dir->ignored[ign]))
+		while (ign < dir->trashable_nr &&
+		       0 <= cmp_dir_entry(&dir->entries[src], &dir->trashable[ign]))
 			ign++;
 
-		if (ign < dir->ignored_nr &&
-		    check_dir_entry_contains(dir->entries[src], dir->ignored[ign])) {
+		if (ign < dir->trashable_nr &&
+		    check_dir_entry_contains(dir->entries[src], dir->trashable[ign])) {
 			/* entries[src] contains an ignored path, so we drop it */
 			free(dir->entries[src]);
 		} else {

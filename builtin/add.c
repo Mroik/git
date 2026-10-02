@@ -352,10 +352,10 @@ static int add_files(struct repository *repo, struct dir_struct *dir, int flags)
 	int i, exit_status = 0;
 	struct string_list matched_sparse_paths = STRING_LIST_INIT_NODUP;
 
-	if (dir->ignored_nr) {
+	if (dir->trashable_nr) {
 		fprintf(stderr, _(ignore_error));
-		for (i = 0; i < dir->ignored_nr; i++)
-			fprintf(stderr, "%s\n", dir->ignored[i]->name);
+		for (i = 0; i < dir->trashable_nr; i++)
+			fprintf(stderr, "%s\n", dir->trashable[i]->name);
 		advise_if_enabled(ADVICE_ADD_IGNORED_FILE,
 				  _("Use -f if you really want to add them."));
 		exit_status = 1;

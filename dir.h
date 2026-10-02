@@ -283,7 +283,9 @@ struct dir_struct {
 	int nr; /* output only */
 
 	/* The number of members in `ignored[]` array. */
-	int ignored_nr; /* output only */
+	int trashable_nr; /* output only */
+
+	int precious_nr;
 
 	/* An array of `struct dir_entry`, each element of which describes a path. */
 	struct dir_entry **entries; /* output only */
@@ -292,7 +294,9 @@ struct dir_struct {
 	 * used for ignored paths with the `DIR_SHOW_IGNORED_TOO` and
 	 * `DIR_COLLECT_IGNORED` flags.
 	 */
-	struct dir_entry **ignored; /* output only */
+	struct dir_entry **trashable; /* output only */
+
+	struct dir_entry **precious;
 
 	/* Enable/update untracked file cache if set */
 	struct untracked_cache *untracked;
@@ -311,8 +315,11 @@ struct dir_struct {
 		/* Keeps track of allocation of `entries[]` array.*/
 		int alloc;
 
-		/* Keeps track of allocation of `ignored[]` array. */
-		int ignored_alloc;
+		/* Keeps track of allocation of `trashable[]` array. */
+		int trashable_alloc;
+
+		/* Keeps track of allocation of `precious[]` array. */
+		int precious_alloc;
 
 		/*
 		 * We maintain three groups of exclude pattern lists:
