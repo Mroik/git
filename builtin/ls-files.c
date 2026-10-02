@@ -685,7 +685,7 @@ int cmd_ls_files(int argc,
 			ls_files_usage, 0);
 	pl = add_pattern_list(&dir, EXC_CMDL, "--exclude option");
 	for (i = 0; i < exclude_list.nr; i++) {
-		add_pattern(exclude_list.items[i].string, "", 0, pl, --exclude_args);
+		add_pattern(exclude_list.items[i].string, "", 0, pl, --exclude_args, 0);
 	}
 
 	if (format && (show_stage || show_others || show_killed ||
