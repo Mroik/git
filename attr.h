@@ -250,11 +250,18 @@ struct attr_state {
 	const char *setto;
 };
 
+enum pattern_flags {
+	PATTERN_FLAG_NODIR = 1,
+	PATTERN_FLAG_ENDSWITH = 4,
+	PATTERN_FLAG_MUSTBEDIR = 8,
+	PATTERN_FLAG_NEGATIVE = 16,
+};
+
 struct pattern {
 	const char *pattern;
 	int patternlen;
 	int nowildcardlen;
-	unsigned flags;		/* PATTERN_FLAG_* */
+	enum pattern_flags flags;	/* PATTERN_FLAG_* */
 };
 
 /*
