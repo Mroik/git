@@ -455,6 +455,8 @@ static struct sparse_checkout_init_opts {
 	int sparse_index;
 } init_opts;
 
+#define PATTERN_DISALLOW_PRECIOUS (1<<1)
+
 static int sparse_checkout_init(int argc, const char **argv, const char *prefix,
 				struct repository *repo)
 {
@@ -487,7 +489,8 @@ static int sparse_checkout_init(int argc, const char **argv, const char *prefix,
 	memset(&pl, 0, sizeof(pl));
 
 	sparse_filename = get_sparse_checkout_filename();
-	res = add_patterns_from_file_to_list(sparse_filename, "", 0, &pl, NULL, 0);
+	res = add_patterns_from_file_to_list(sparse_filename, "", 0, &pl, NULL,
+					     PATTERN_DISALLOW_PRECIOUS);
 
 	/* If we already have a sparse-checkout file, use it. */
 	if (res >= 0) {
@@ -515,8 +518,8 @@ static int sparse_checkout_init(int argc, const char **argv, const char *prefix,
 
 	free(sparse_filename);
 
-	add_pattern("/*", empty_base, 0, &pl, 0);
-	add_pattern("!/*/", empty_base, 0, &pl, 0);
+	add_pattern("/*", empty_base, 0, &pl, 0, 0);
+	add_pattern("!/*/", empty_base, 0, &pl, 0, 0);
 	pl.use_cone_patterns = init_opts.cone_mode;
 
 	return write_patterns_and_update(repo, &pl);
@@ -618,12 +621,12 @@ static void add_patterns_from_input(struct pattern_list *pl,
 			struct strbuf line = STRBUF_INIT;
 
 			while (!strbuf_getline(&line, file))
-				add_pattern(line.buf, empty_base, 0, pl, 0);
+				add_pattern(line.buf, empty_base, 0, pl, 0, 0);
 
 			strbuf_release(&line);
 		} else {
 			for (i = 0; i < argc; i++)
-				add_pattern(argv[i], empty_base, 0, pl, 0);
+				add_pattern(argv[i], empty_base, 0, pl, 0, 0);
 		}
 	}
 }
@@ -1079,7 +1082,7 @@ static int sparse_checkout_disable(int argc, const char **argv,
 	pl.use_cone_patterns = 0;
 	cfg->apply_sparse_checkout = 1;
 
-	add_pattern("/*", empty_base, 0, &pl, 0);
+	add_pattern("/*", empty_base, 0, &pl, 0, 0);
 
 	prepare_repo_settings(the_repository);
 	repo->settings.sparse_index = 0;
