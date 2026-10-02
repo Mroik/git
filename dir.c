@@ -36,6 +36,7 @@
 #include "trace2.h"
 #include "tree.h"
 #include "hex.h"
+#include "attr.h"
 
  /*
   * The maximum size of a pattern/exclude file. If the file exceeds this size
@@ -701,7 +702,7 @@ int no_wildcard(const char *string)
 
 void parse_path_pattern(const char **pattern,
 			   int *patternlen,
-			   unsigned *flags,
+			   enum pattern_flags *flags,
 			   int *nowildcardlen)
 {
 	const char *p = *pattern;
@@ -979,7 +980,7 @@ void add_pattern(const char *string, const char *base,
 {
 	struct path_pattern *pattern;
 	int patternlen;
-	unsigned flags;
+	enum pattern_flags flags;
 	int nowildcardlen;
 
 	parse_path_pattern(&string, &patternlen, &flags, &nowildcardlen);
