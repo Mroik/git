@@ -700,7 +700,10 @@ int no_wildcard(const char *string)
 	return string[simple_length(string)] == '\0';
 }
 
-void parse_path_pattern(const char **pattern,
+/*
+ * Returns 1 if the pattern is problematic, 0 otherwise
+ */
+int parse_path_pattern(const char **pattern,
 			   int *patternlen,
 			   enum pattern_flags *flags,
 			   int *nowildcardlen)
@@ -709,7 +712,12 @@ void parse_path_pattern(const char **pattern,
 	size_t i, len;
 
 	*flags = 0;
-	if (*p == '!') {
+	if (simple_length(p) >= 2 && p[0] == '!' && p[1] == '$') {
+		return 1;
+	} else if (*p == '$') {
+		*flags |= PATTERN_FLAG_PRECIOUS;
+		p++;
+	} else if (*p == '!') {
 		*flags |= PATTERN_FLAG_NEGATIVE;
 		p++;
 	}
@@ -736,6 +744,7 @@ void parse_path_pattern(const char **pattern,
 		*flags |= PATTERN_FLAG_ENDSWITH;
 	*pattern = p;
 	*patternlen = len;
+	return 0;
 }
 
 int pl_hashmap_cmp(const void *cmp_data UNUSED,
@@ -975,6 +984,14 @@ int hashmap_contains_parent(struct hashmap *map,
 	return 0;
 }
 
+/*
+ * Parses the pattern for its type and sets flags accordingly, then adds it to
+ * the pattern list. If the pattern is invalid the function returns early with a
+ * warning.
+ *
+ * The only problematic patterns at the moment are the one starting with '!$'
+ * which are negated precious-files.
+ */
 void add_pattern(const char *string, const char *base,
 		 int baselen, struct pattern_list *pl, int srcpos)
 {
@@ -983,7 +1000,10 @@ void add_pattern(const char *string, const char *base,
 	enum pattern_flags flags;
 	int nowildcardlen;
 
-	parse_path_pattern(&string, &patternlen, &flags, &nowildcardlen);
+	if (parse_path_pattern(&string, &patternlen, &flags, &nowildcardlen)) {
+		warning(_("pattern '%s' is problematic, skipping"), string);
+		return;
+	}
 	FLEX_ALLOC_MEM(pattern, pattern, string, patternlen);
 	pattern->patternlen = patternlen;
 	pattern->nowildcardlen = nowildcardlen;

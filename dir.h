@@ -472,7 +472,7 @@ int add_patterns_from_blob_to_list(struct object_id *oid,
 int add_patterns_from_buffer(char *buf, size_t size,
 			     const char *base, int baselen,
 			     struct pattern_list *pl);
-void parse_path_pattern(const char **string, int *patternlen, enum pattern_flags *flags, int *nowildcardlen);
+int parse_path_pattern(const char **string, int *patternlen, enum pattern_flags *flags, int *nowildcardlen);
 void add_pattern(const char *string, const char *base,
 		 int baselen, struct pattern_list *pl, int srcpos);
 void clear_pattern_list(struct pattern_list *pl);
