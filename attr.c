@@ -382,10 +382,14 @@ struct match_attr *parse_attr_line(const char *line, const char *src,
 		char *p = (char *)&(res->state[num_attr]);
 		memcpy(p, name, namelen);
 		res->u.pat.pattern = p;
-		parse_path_pattern(&res->u.pat.pattern,
+		if (parse_path_pattern(&res->u.pat.pattern,
 				      &res->u.pat.patternlen,
 				      &res->u.pat.flags,
-				      &res->u.pat.nowildcardlen);
+				      &res->u.pat.nowildcardlen)) {
+			warning(_("pattern '%s' is invalid, skipping"),
+				  (char *)&res->u.pat.pattern);
+			goto fail_return;
+		}
 		if (res->u.pat.flags & PATTERN_FLAG_NEGATIVE) {
 			warning(_("Negative patterns are ignored in git attributes\n"
 				  "Use '\\!' for literal leading exclamation."));
