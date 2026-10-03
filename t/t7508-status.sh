@@ -301,6 +301,15 @@ EOF
 	test_cmp expect output
 '
 
+test_expect_success 'parse invalid pattern' "
+	test_when_finished rm actual gitignore_backup &&
+	test_when_finished cp gitignore_backup .gitignore &&
+	cp .gitignore gitignore_backup &&
+	echo '!$/ciao' >> .gitignore &&
+	git status >actual 2>&1 &&
+	test_grep \"warning: pattern '!$/ciao' is problematic, skipping\" actual
+"
+
 test_expect_success 'status with gitignore (nothing untracked)' '
 	{
 		echo ".gitignore" &&
