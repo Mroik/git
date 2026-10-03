@@ -255,6 +255,7 @@ enum pattern_flags {
 	PATTERN_FLAG_ENDSWITH = 4,
 	PATTERN_FLAG_MUSTBEDIR = 8,
 	PATTERN_FLAG_NEGATIVE = 16,
+	PATTERN_FLAG_PRECIOUS = 32,
 };
 
 struct pattern {
