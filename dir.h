@@ -449,6 +449,10 @@ struct path_pattern *last_matching_pattern(struct dir_struct *dir,
 					   struct index_state *istate,
 					   const char *name, int *dtype);
 
+int is_trashable(struct dir_struct *dir,
+		struct index_state *istate,
+		const char *name, int *dtype);
+
 int is_excluded(struct dir_struct *dir,
 		struct index_state *istate,
 		const char *name, int *dtype);

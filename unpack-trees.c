@@ -2434,11 +2434,12 @@ static int check_ok_to_remove(const char *name, int len, int dtype,
 	if (repo_ignore_case(the_repository) && icase_exists(o, name, len, st))
 		return 0;
 
+	/* Check if trashable */
 	if (o->internal.dir &&
-	    is_excluded(o->internal.dir, o->src_index, name, &dtype))
+	    is_trashable(o->internal.dir, o->src_index, name, &dtype))
 		/*
-		 * ce->name is explicitly excluded, so it is Ok to
-		 * overwrite it.
+		 * ce->name is explicitly marked as trashable,
+		 * so it is Ok to overwrite it.
 		 */
 		return 0;
 	if (S_ISDIR(st->st_mode)) {
