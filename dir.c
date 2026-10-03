@@ -1861,7 +1861,24 @@ struct path_pattern *last_matching_pattern(struct dir_struct *dir,
 
 /*
  * Loads the exclude lists for the directory containing pathname, then
- * scans all exclude lists to determine whether pathname is excluded.
+ * scans all exclude lists to determine whether pathname is trashable.
+ * Returns 1 if true, otherwise 0.
+ */
+int is_trashable(struct dir_struct *dir, struct index_state *istate,
+		const char *pathname, int *dtype_p)
+{
+	struct path_pattern *pattern =
+		last_matching_pattern(dir, istate, pathname, dtype_p);
+	if (pattern)
+		return pattern->flags &
+		       (PATTERN_FLAG_NEGATIVE | PATTERN_FLAG_PRECIOUS) ? 0 : 1;
+	return 0;
+}
+
+/*
+ * Loads the exclude lists for the directory containing pathname, then
+ * scans all exclude lists to determine whether pathname is excluded (both
+ * trashable and precious).
  * Returns 1 if true, otherwise 0.
  */
 int is_excluded(struct dir_struct *dir, struct index_state *istate,
