@@ -244,7 +244,7 @@ test_expect_success '3a: setup--add repo dir' '
 test_expect_success '3b: ignored' '
 	(
 	cd test3 &&
-	git --git-dir=repo/.git ls-files -io --directory --exclude-standard >actual-ignored-unsorted &&
+	git --git-dir=repo/.git ls-files -i -o --directory --exclude-standard >actual-ignored-unsorted &&
 	sort actual-ignored-unsorted >actual-ignored &&
 	sort expect-ignored-unsorted >expect-ignored &&
 	test_cmp expect-ignored actual-ignored
