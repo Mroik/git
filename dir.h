@@ -212,13 +212,29 @@ struct untracked_cache {
 struct dir_struct {
 
 	/* bit-field of options */
-	enum {
+	enum dir_struct_flags {
 
 		/**
 		 * Return just ignored files in `entries[]`, not untracked files.
 		 * This flag is mutually exclusive with `DIR_SHOW_IGNORED_TOO`.
+		 * This is a superset of DIR_SHOW_TRASHABLE and DIR_SHOW_PRECIOUS.
+		 *
+		 * This flag should probably be dropped throughout the codebase
+		 * in favour of (DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS).
 		 */
 		DIR_SHOW_IGNORED = 1<<0,
+
+		/**
+		 * Return just trashable files in `entries[]`, not untracked files.
+		 * This flag is mutually exclusive with `DIR_SHOW_IGNORED_TOO`.
+		 */
+		DIR_SHOW_TRASHABLE = 1<<10,
+
+		/**
+		 * Return just precious files in `entries[]`, not untracked files.
+		 * This flag is mutually exclusive with `DIR_SHOW_IGNORED_TOO`.
+		 */
+		DIR_SHOW_PRECIOUS = 1<<11,
 
 		/* Include a directory that is not tracked. */
 		DIR_SHOW_OTHER_DIRECTORIES = 1<<1,
@@ -243,7 +259,8 @@ struct dir_struct {
 		/**
 		 * Similar to `DIR_SHOW_IGNORED`, but return ignored files in
 		 * `ignored[]` in addition to untracked files in `entries[]`.
-		 * This flag is mutually exclusive with `DIR_SHOW_IGNORED`.
+		 * This flag is mutually exclusive with `DIR_SHOW_IGNORED`,
+		 * `DIR_SHOW_TRASHABLE` and `DIR_SHOW_PRECIOUS`.
 		 */
 		DIR_SHOW_IGNORED_TOO = 1<<5,
 
@@ -278,11 +295,17 @@ struct dir_struct {
 	/* The number of members in `entries[]` array. */
 	int nr; /* output only */
 
+	/* The number of members in `precious[]` array. */
+	int precious_nr; /* output only */
+
 	/* The number of members in `ignored[]` array. */
 	int ignored_nr; /* output only */
 
 	/* An array of `struct dir_entry`, each element of which describes a path. */
 	struct dir_entry **entries; /* output only */
+
+	/* Used for listing precious files with `DIR_SHOW_PRECIOUS`. */
+	struct dir_entry **precious; /* output only */
 
 	/**
 	 * used for ignored paths with the `DIR_SHOW_IGNORED_TOO` and
@@ -306,6 +329,9 @@ struct dir_struct {
 	struct dir_struct_internal {
 		/* Keeps track of allocation of `entries[]` array.*/
 		int alloc;
+
+		/* Keeps track of allocation of `precious[]` array.*/
+		int precious_alloc;
 
 		/* Keeps track of allocation of `ignored[]` array. */
 		int ignored_alloc;
@@ -441,6 +467,10 @@ int match_pathname(const char *, int,
 struct path_pattern *last_matching_pattern(struct dir_struct *dir,
 					   struct index_state *istate,
 					   const char *name, int *dtype);
+
+int is_precious(struct dir_struct *dir,
+		struct index_state *istate,
+		const char *name, int *dtype);
 
 int is_trashable(struct dir_struct *dir,
 		struct index_state *istate,
