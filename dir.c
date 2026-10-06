@@ -281,10 +281,25 @@ int fill_directory(struct dir_struct *dir,
 {
 	const char *matched_prefix;
 	size_t prefix_len;
+	unsigned exclusive;
+	int i;
 
-	unsigned exclusive_flags = DIR_SHOW_IGNORED | DIR_SHOW_IGNORED_TOO;
-	if ((dir->flags & exclusive_flags) == exclusive_flags)
-		BUG("DIR_SHOW_IGNORED and DIR_SHOW_IGNORED_TOO are exclusive");
+	const unsigned exclusive_with_too[] = {
+		DIR_SHOW_IGNORED,
+		DIR_SHOW_TRASHABLE,
+		DIR_SHOW_PRECIOUS,
+	};
+	const char *exclusive_bug_text[] = {
+		"DIR_SHOW_IGNORED",
+		"DIR_SHOW_TRASHABLE",
+		"DIR_SHOW_PRECIOUS",
+	};
+	for (i = 0; i < 3; i++) {
+		exclusive = (exclusive_with_too[i] | DIR_SHOW_IGNORED_TOO);
+		if ((dir->flags & exclusive) == exclusive)
+			BUG("%s and DIR_SHOW_IGNORED_TOO are exclusive",
+			    exclusive_bug_text[i]);
+	}
 
 	/*
 	 * Calculate common prefix for the pathspec, and
@@ -1861,6 +1876,21 @@ struct path_pattern *last_matching_pattern(struct dir_struct *dir,
 
 /*
  * Loads the exclude lists for the directory containing pathname, then
+ * scans all exclude lists to determine whether pathname is precious.
+ * Returns 1 if true, otherwise 0.
+ */
+int is_precious(struct dir_struct *dir, struct index_state *istate,
+		const char *pathname, int *dtype_p)
+{
+	struct path_pattern *pattern =
+		last_matching_pattern(dir, istate, pathname, dtype_p);
+	if (pattern)
+		return !!(pattern->flags & PATTERN_FLAG_PRECIOUS);
+	return 0;
+}
+
+/*
+ * Loads the exclude lists for the directory containing pathname, then
  * scans all exclude lists to determine whether pathname is trashable.
  * Returns 1 if true, otherwise 0.
  */
@@ -1909,6 +1939,17 @@ static struct dir_entry *dir_add_name(struct dir_struct *dir,
 
 	ALLOC_GROW(dir->entries, dir->nr+1, dir->internal.alloc);
 	return dir->entries[dir->nr++] = dir_entry_new(pathname, len);
+}
+
+static struct dir_entry *dir_add_precious(struct dir_struct *dir,
+				      struct index_state *istate,
+				      const char *pathname, int len)
+{
+	if (index_file_exists(istate, pathname, len, repo_ignore_case(the_repository)))
+		return NULL;
+
+	ALLOC_GROW(dir->precious, dir->precious_nr+1, dir->internal.precious_alloc);
+	return dir->precious[dir->precious_nr++] = dir_entry_new(pathname, len);
 }
 
 struct dir_entry *dir_add_ignored(struct dir_struct *dir,
@@ -2528,13 +2569,18 @@ static enum path_treatment treat_path(struct dir_struct *dir,
 	    (directory_exists_in_index(istate, path->buf, path->len) == index_nonexistent))
 		return path_none;
 
-	excluded = is_excluded(dir, istate, path->buf, &dtype);
+	excluded = is_excluded(dir, istate, path->buf, &dtype) ||
+		   is_trashable(dir, istate, path->buf, &dtype) ||
+		   is_precious(dir, istate, path->buf, &dtype);
 
 	/*
 	 * Excluded? If we don't explicitly want to show
 	 * ignored files, ignore it
 	 */
-	if (excluded && !(dir->flags & (DIR_SHOW_IGNORED|DIR_SHOW_IGNORED_TOO)))
+	if (excluded && !(dir->flags & (DIR_SHOW_IGNORED|
+					DIR_SHOW_TRASHABLE|
+					DIR_SHOW_PRECIOUS|
+					DIR_SHOW_IGNORED_TOO)))
 		return path_excluded;
 
 	switch (dtype) {
@@ -2704,20 +2750,28 @@ static void add_path_to_appropriate_result_list(struct dir_struct *dir,
 	const struct pathspec *pathspec,
 	enum path_treatment state)
 {
+	int dtype;
+
 	/* add the path to the appropriate result list */
 	switch (state) {
 	case path_excluded:
-		if (dir->flags & DIR_SHOW_IGNORED)
-			dir_add_name(dir, istate, path->buf, path->len);
-		else if ((dir->flags & DIR_SHOW_IGNORED_TOO) ||
+		if (dir->flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS)) {
+			dtype = resolve_dtype(cdir->d_type, istate, path->buf, path->len);
+			if (is_precious(dir, istate, path->buf, &dtype))
+				dir_add_precious(dir, istate, path->buf, path->len);
+			else
+				dir_add_name(dir, istate, path->buf, path->len);
+		} else if ((dir->flags & DIR_SHOW_IGNORED_TOO) ||
 			((dir->flags & DIR_COLLECT_IGNORED) &&
 			exclude_matches_pathspec(path->buf, path->len,
-						 pathspec)))
+						 pathspec))) {
 			dir_add_ignored(dir, istate, path->buf, path->len);
+		}
 		break;
 
 	case path_untracked:
-		if (dir->flags & DIR_SHOW_IGNORED)
+		if (dir->flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE |
+				  DIR_SHOW_PRECIOUS))
 			break;
 		dir_add_name(dir, istate, path->buf, path->len);
 		if (cdir->fdir)
@@ -3210,6 +3264,7 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 		read_directory_recursive(dir, istate, path, len, untracked, 0, 0, pathspec);
 	QSORT(dir->entries, dir->nr, cmp_dir_entry);
 	QSORT(dir->ignored, dir->ignored_nr, cmp_dir_entry);
+	QSORT(dir->precious, dir->precious_nr, cmp_dir_entry);
 
 	emit_traversal_statistics(dir, istate->repo, path, len);
 
@@ -3619,8 +3674,11 @@ void dir_clear(struct dir_struct *dir)
 		free(dir->ignored[i]);
 	for (i = 0; i < dir->nr; i++)
 		free(dir->entries[i]);
+	for (i = 0; i< dir->precious_nr; i++)
+		free(dir->precious[i]);
 	free(dir->ignored);
 	free(dir->entries);
+	free(dir->precious);
 
 	stk = dir->internal.exclude_stack;
 	while (stk) {
