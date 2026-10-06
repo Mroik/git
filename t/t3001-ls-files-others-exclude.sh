@@ -55,6 +55,7 @@ expect
 !*.8' >.git/ignore
 
 echo '*.1
+$wasder
 /*.3
 !*.6' >.gitignore
 echo '*.2
@@ -74,6 +75,28 @@ test_expect_success 'git ls-files --others with various exclude options.' '
 	>output &&
 	test_filter_gitconfig output &&
 	test_cmp expect output
+'
+
+test_expect_success 'git ls-files -o -i' '
+	touch wasder &&
+	git ls-files -o -i --exclude-standard >output &&
+	test_grep "wasder" output
+'
+
+test_expect_success 'git ls-files -o --ignored=trashable' '
+	git ls-files -o --ignored=trashable --exclude-standard >output &&
+	test_grep ! "wasder" output
+'
+
+test_expect_success 'git ls-files -o --ignored=precious' '
+	git ls-files -o --ignored=precious --exclude-standard >output &&
+	test_grep "wasder" output
+'
+
+test_expect_success 'git ls-files -o --ignored=precious --ignored=trashable' '
+	test_when_finished rm wasder &&
+	git ls-files -o --ignored=precious --ignored=trashable --exclude-standard >output &&
+	test_grep ! "wasder" output
 '
 
 # Test \r\n (MSDOS-like systems)

@@ -163,8 +163,21 @@ static void show_dir_entry(struct index_state *istate,
 	write_name(ent->name);
 }
 
-static void show_other_files(struct index_state *istate,
-			     const struct dir_struct *dir)
+static void show_precious_files(struct index_state *istate,
+				const struct dir_struct *dir)
+{
+	int i;
+
+	for (i = 0; i < dir->precious_nr; i++) {
+		struct dir_entry *ent = dir->precious[i];
+		if (!index_name_is_other(istate, ent->name, ent->len))
+			continue;
+		show_dir_entry(istate, tag_other, ent);
+	}
+}
+
+static void show_entries_files(struct index_state *istate,
+			       const struct dir_struct *dir)
 {
 	int i;
 
@@ -174,6 +187,24 @@ static void show_other_files(struct index_state *istate,
 			continue;
 		show_dir_entry(istate, tag_other, ent);
 	}
+}
+
+static void show_ignored_files(struct index_state *istate,
+			       const struct dir_struct *dir)
+{
+	show_entries_files(istate, dir);
+	show_precious_files(istate, dir);
+}
+
+static void show_other_files(struct index_state *istate,
+			     const struct dir_struct *dir)
+{
+	if (dir->flags & DIR_SHOW_IGNORED)
+		show_ignored_files(istate, dir);
+	else if (dir->flags & DIR_SHOW_PRECIOUS)
+		show_precious_files(istate, dir);
+	else
+		show_entries_files(istate, dir);
 }
 
 static void show_killed_files(struct index_state *istate,
@@ -547,6 +578,30 @@ static const char * const ls_files_usage[] = {
 	NULL
 };
 
+static int option_parse_ignored(const struct option *opt, const char *arg, int unset)
+{
+	enum dir_struct_flags *flags = opt->value;
+
+	BUG_ON_OPT_NEG(unset);
+
+	/*
+	 * Reset in case --ignored=<type> is specified multiple times, we keep
+	 * the last one.
+	 */
+	*flags &= ~(DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS);
+
+	if (!arg)
+		*flags |= DIR_SHOW_IGNORED;
+	else if (!strcmp(arg, "trashable"))
+		*flags |= DIR_SHOW_TRASHABLE;
+	else if (!strcmp(arg, "precious"))
+		*flags |= DIR_SHOW_PRECIOUS;
+	else
+		die(_("'%s' argument is not a valid value"), arg);
+
+	return 0;
+}
+
 static int option_parse_exclude(const struct option *opt,
 				const char *arg, int unset)
 {
@@ -615,9 +670,9 @@ int cmd_ls_files(int argc,
 			N_("show modified files in the output")),
 		OPT_BOOL('o', "others", &show_others,
 			N_("show other files in the output")),
-		OPT_BIT('i', "ignored", &dir.flags,
+		OPT_CALLBACK_F('i', "ignored", &dir.flags, N_("type"),
 			N_("show ignored files in the output"),
-			DIR_SHOW_IGNORED),
+			PARSE_OPT_OPTARG | PARSE_OPT_NONEG, option_parse_ignored),
 		OPT_BOOL('s', "stage", &show_stage,
 			N_("show staged contents' object name in the output")),
 		OPT_BOOL('k', "killed", &show_killed,
@@ -704,7 +759,9 @@ int cmd_ls_files(int argc,
 		tag_skip_worktree = "S ";
 		tag_resolve_undo = "U ";
 	}
-	if (show_modified || show_others || show_deleted || (dir.flags & DIR_SHOW_IGNORED) || show_killed)
+	if (show_modified || show_others || show_deleted ||
+	    (dir.flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS)) ||
+	    show_killed)
 		require_work_tree = 1;
 	if (show_unmerged)
 		/*
@@ -753,10 +810,12 @@ int cmd_ls_files(int argc,
 	if (pathspec.nr && error_unmatch)
 		ps_matched = xcalloc(pathspec.nr, 1);
 
-	if ((dir.flags & DIR_SHOW_IGNORED) && !show_others && !show_cached)
+	if ((dir.flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS)) &&
+	    !show_others && !show_cached)
 		die("ls-files -i must be used with either -o or -c");
 
-	if ((dir.flags & DIR_SHOW_IGNORED) && !exc_given)
+	if ((dir.flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS)) &&
+	    !exc_given)
 		die("ls-files --ignored needs some exclude pattern");
 
 	/* With no flags, we default to showing the cached files */
