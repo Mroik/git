@@ -922,7 +922,7 @@ int cmd_clean(int argc,
 	      struct repository *repo UNUSED)
 {
 	int i, res;
-	int dry_run = 0, remove_directories = 0, quiet = 0, ignored = 0;
+	int dry_run = 0, remove_directories = 0, quiet = 0, trashable = 0;
 	int ignored_only = 0, force = 0, errors = 0, gone = 1;
 	int rm_flags = REMOVE_DIR_KEEP_NESTED_GIT;
 	struct strbuf abs_path = STRBUF_INIT;
@@ -942,7 +942,7 @@ int cmd_clean(int argc,
 				N_("remove whole directories")),
 		OPT_CALLBACK_F('e', "exclude", &exclude_list, N_("pattern"),
 		  N_("add <pattern> to ignore rules"), PARSE_OPT_NONEG, exclude_cb),
-		OPT_BOOL('x', NULL, &ignored, N_("remove ignored files, too")),
+		OPT_BOOL('x', NULL, &trashable, N_("remove trashable files, too")),
 		OPT_BOOL('X', NULL, &ignored_only,
 				N_("remove only ignored files")),
 		OPT_END()
@@ -963,9 +963,9 @@ int cmd_clean(int argc,
 
 	dir.flags |= DIR_SHOW_OTHER_DIRECTORIES;
 
-	if (ignored && ignored_only)
+	if (trashable && ignored_only)
 		die(_("options '%s' and '%s' cannot be used together"), "-x", "-X");
-	if (!ignored)
+	if (!trashable)
 		setup_standard_excludes(&dir);
 	if (ignored_only)
 		dir.flags |= DIR_SHOW_IGNORED;
@@ -982,20 +982,20 @@ int cmd_clean(int argc,
 		/*
 		 * We need to know about ignored files too:
 		 *
-		 * If (ignored), then we will delete ignored files as well.
+		 * If (trashable), then we will delete trashable files as well.
 		 *
-		 * If (!ignored), then even though we not are doing
-		 * anything with ignored files, we need to know about them
+		 * If (!trashable), then even though we not are doing
+		 * anything with trashable files, we need to know about them
 		 * so that we can avoid deleting a directory of untracked
-		 * files that also contains an ignored file within it.
+		 * files that also contains an trashable file within it.
 		 *
-		 * For the (!ignored) case, since we only need to avoid
-		 * deleting ignored files, we can set
+		 * For the (!trashable) case, since we only need to avoid
+		 * deleting trashable files, we can set
 		 * DIR_SHOW_IGNORED_TOO_MODE_MATCHING in order to avoid
-		 * recursing into a directory which is itself ignored.
+		 * recursing into a directory which is itself trashable.
 		 */
 		dir.flags |= DIR_SHOW_IGNORED_TOO;
-		if (!ignored)
+		if (!trashable)
 			dir.flags |= DIR_SHOW_IGNORED_TOO_MODE_MATCHING;
 
 		/*

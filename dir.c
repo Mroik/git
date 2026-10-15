@@ -2768,12 +2768,14 @@ static void add_path_to_appropriate_result_list(struct dir_struct *dir,
 	/* add the path to the appropriate result list */
 	switch (state) {
 	case path_excluded:
+		dtype = resolve_dtype(cdir->d_type, istate, path->buf, path->len);
+		if (is_precious(dir, istate, path->buf, &dtype)) {
+			dir_add_precious(dir, istate, path->buf, path->len);
+			break;
+		}
+
 		if (dir->flags & (DIR_SHOW_IGNORED | DIR_SHOW_TRASHABLE | DIR_SHOW_PRECIOUS)) {
-			dtype = resolve_dtype(cdir->d_type, istate, path->buf, path->len);
-			if (is_precious(dir, istate, path->buf, &dtype))
-				dir_add_precious(dir, istate, path->buf, path->len);
-			else
-				dir_add_name(dir, istate, path->buf, path->len);
+			dir_add_name(dir, istate, path->buf, path->len);
 		} else if ((dir->flags & DIR_SHOW_IGNORED_TOO) ||
 			((dir->flags & DIR_COLLECT_IGNORED) &&
 			exclude_matches_pathspec(path->buf, path->len,
